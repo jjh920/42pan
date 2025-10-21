@@ -142,10 +142,10 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         welcome_channel = find_channel(guild, WELCOME_CHANNEL_NAME)
         if welcome_channel:
             await interaction.followup.send(
-                f"가입이 완료되었습니다! 🎉\n이제 {welcome_channel.mention} 채널로 이동해주세요!",
+                f"가입이 완료되었습니다! 🎉\n {welcome_channel.mention} <<<<<<<버튼을 눌러서 닉네임이 잘 변경되었는지 확인!!",
                 ephemeral=True
             )
-            await welcome_channel.send(f"🎉 {member.mention} 님이 가입을 완료했습니다! 환영합니다! 🎊")
+            await welcome_channel.send(f"🎉 {member.mention} 님! 환영합니다! 🎊 닉네임 변경시 운영진 및 관리자에게 문의하세요!!")
         else:
             await interaction.followup.send("가입이 완료되었습니다! (환영 채널을 찾을 수 없습니다)", ephemeral=True)
 
