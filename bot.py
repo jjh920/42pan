@@ -1,3 +1,4 @@
+# bot.py (디버그/안정화 패치)
 import os
 import discord
 from discord import app_commands
@@ -5,62 +6,74 @@ from discord.ui import View, Button, Select, Modal, TextInput
 from typing import Dict, Any
 from keep_alive import keep_alive
 
-# ===== 설정 =====
-SIGNUP_CHANNEL_NAME = "가입하기"     # 이 채널에서 버튼을 누르면 절차 시작
-INITIAL_ROLE_NAME = "가입자<"        # 완료 시 제거(있을 때만)
+SIGNUP_CHANNEL_NAME = "가입하기"
+INITIAL_ROLE_NAME = "가입자<"
 
-GRADE_CHOICES = ["길드원", "운영진", "관리자"]       # 길드원은 '역할 부여 없음'
-GRADE_ROLE_NAMES = ["운영진", "관리자"]              # 실제로 존재해야 하는 등급 역할
+GRADE_CHOICES = ["길드원", "운영진", "관리자"]     # 길드원은 역할 미부여
+GRADE_ROLE_NAMES = ["운영진", "관리자"]            # 실제로 존재해야 함
 SERVER_ROLE_NAMES = [f"{i}서버" for i in range(1, 11)]
 
-# ===== 클라이언트/인텐트 =====
 intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-# 유저별 진행 상태
 SIGNUP_STATE: Dict[int, Dict[str, Any]] = {}
 
-# ===== 유틸 =====
 def get_role_by_name(guild: discord.Guild, name: str) -> discord.Role | None:
     return discord.utils.get(guild.roles, name=name)
 
 async def ensure_roles_exist(guild: discord.Guild) -> bool:
     for rn in GRADE_ROLE_NAMES + SERVER_ROLE_NAMES:
         if get_role_by_name(guild, rn) is None:
+            print(f"[WARN] 역할 없음: {rn}")
             return False
-    return True  # INITIAL_ROLE_NAME 은 없어도 동작
+    return True
+
+def bot_perm_check(guild: discord.Guild, channel: discord.abc.GuildChannel | None = None) -> str | None:
+    """필수 권한/역할순서 체크. 문제가 없으면 None."""
+    me: discord.Member = guild.me  # 봇 자신
+    if not me:
+        return "봇 멤버 정보를 가져오지 못했습니다."
+    # 권한
+    perms = channel.permissions_for(me) if channel else guild.me.guild_permissions
+    if not perms.manage_roles:
+        return "봇에 'Manage Roles(역할 관리)' 권한이 필요합니다."
+    if not perms.change_nickname:
+        return "봇에 'Change Nickname(닉네임 변경)' 권한이 필요합니다."
+    # 역할 순서(봇 역할이 더 위여야 함)
+    bot_top_pos = max((r.position for r in me.roles), default=-1)
+    for rn in GRADE_ROLE_NAMES + SERVER_ROLE_NAMES + [INITIAL_ROLE_NAME]:
+        r = get_role_by_name(guild, rn)
+        if r and r.position >= bot_top_pos:
+            return f"봇 역할이 '{rn}' 역할보다 위에 있어야 합니다. (서버 설정 → 역할 순서 조정)"
+    return None
 
 async def apply_signup(guild: discord.Guild, member: discord.Member, grade_choice: str, server_choice: str, raw_nick: str):
-    # 닉네임: "1서버/닉네임"
     new_nick = f"{server_choice}/{raw_nick}"
-
     add_grade_role = None
     if grade_choice in GRADE_ROLE_NAMES:
         add_grade_role = get_role_by_name(guild, grade_choice)
         if not add_grade_role:
             raise RuntimeError(f"서버에 '{grade_choice}' 역할이 없습니다.")
-
     server_role = get_role_by_name(guild, server_choice)
     if not server_role:
         raise RuntimeError(f"서버에 '{server_choice}' 역할이 없습니다.")
 
-    # 제거 대상: 다른 등급/다른 서버/초기 역할
     to_remove_grade = [r for r in member.roles if r.name in GRADE_ROLE_NAMES and r != add_grade_role]
     to_remove_server = [r for r in member.roles if r.name in SERVER_ROLE_NAMES and r != server_role]
     initial_role = get_role_by_name(guild, INITIAL_ROLE_NAME)
     to_remove_initial = [initial_role] if initial_role and initial_role in member.roles else []
 
-    # 추가 대상
     to_add = []
     if add_grade_role and add_grade_role not in member.roles:
         to_add.append(add_grade_role)
     if server_role not in member.roles:
         to_add.append(server_role)
 
-    # 적용
+    # 변경 적용
+    print(f"[INFO] 닉 '{member}' -> '{new_nick}', 등급 '{grade_choice}', 서버 '{server_choice}'")
     await member.edit(nick=new_nick, reason="가입 봇 자동 설정")
     roles_to_remove = to_remove_grade + to_remove_server + to_remove_initial
     if roles_to_remove:
@@ -96,13 +109,10 @@ class ServerSelect(Select):
         uid = interaction.user.id
         SIGNUP_STATE.setdefault(uid, {})
         SIGNUP_STATE[uid]["server"] = server
-
-        modal = NicknameModal()
-        await interaction.response.send_modal(modal)
+        await interaction.response.send_modal(NicknameModal())
 
 class NicknameModal(Modal, title="닉네임 입력"):
     nickname: TextInput
-
     def __init__(self):
         super().__init__(timeout=180)
         self.nickname = TextInput(label="귀하의 닉네임을 적어주세요", placeholder="예: 주현", max_length=32)
@@ -120,6 +130,12 @@ class NicknameModal(Modal, title="닉네임 입력"):
             SIGNUP_STATE.pop(uid, None)
             return
 
+        # 권한/역할순서 사전 점검
+        problem = bot_perm_check(interaction.guild, interaction.channel)
+        if problem:
+            await interaction.response.send_message(f"⚠️ 설정 문제: {problem}", ephemeral=True)
+            return
+
         await interaction.response.send_message("닉네임과 등급/서버를 변경중에 있습니다...", ephemeral=True)
 
         try:
@@ -127,9 +143,7 @@ class NicknameModal(Modal, title="닉네임 입력"):
             if not member:
                 await interaction.followup.send("멤버 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.", ephemeral=True)
                 return
-
             await apply_signup(interaction.guild, member, grade_choice=grade, server_choice=server, raw_nick=raw_nick)
-
             await interaction.followup.send(
                 content=(
                     "✅ 완료입니다.\n"
@@ -141,9 +155,10 @@ class NicknameModal(Modal, title="닉네임 입력"):
                 ephemeral=True
             )
         except discord.Forbidden:
-            await interaction.followup.send("⚠️ 권한 부족: 봇에 '닉네임 변경'과 '역할 관리' 권한이 필요합니다.", ephemeral=True)
+            await interaction.followup.send("🚫 권한 부족: 봇에 '닉네임 변경'과 '역할 관리' 권한이 필요합니다.", ephemeral=True)
         except Exception as e:
             await interaction.followup.send(f"⚠️ 처리 중 오류: {e}", ephemeral=True)
+            raise
         finally:
             SIGNUP_STATE.pop(uid, None)
 
@@ -159,6 +174,10 @@ class StartSignupView(View):
                 ephemeral=True
             )
             return
+        problem = bot_perm_check(interaction.guild, interaction.channel)
+        if problem:
+            await interaction.response.send_message(f"⚠️ 설정 문제: {problem}", ephemeral=True)
+            return
 
         view = View(timeout=180)
         view.add_item(GradeSelect())
@@ -168,34 +187,51 @@ class StartSignupView(View):
             ephemeral=True
         )
 
-# ===== 명령어: '가입하기' 채널에 버튼 메시지 설치 =====
-@tree.command(name="가입하기설치", description=f"'{SIGNUP_CHANNEL_NAME}' 채널에 가입 시작 버튼 메시지를 설치 (관리자)")
+# ---- 명령어들 ----
+
+@tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    # 슬래시 커맨드 에러 로깅
+    print(f"[CMD ERROR] {interaction.command} in {interaction.guild}: {error}")
+
+@tree.command(name="가입하기설치", description=f"'{SIGNUP_CHANNEL_NAME}' 채널에 가입 시작 버튼 메시지 설치 (관리자)")
 @app_commands.checks.has_permissions(administrator=True)
-async def setup_signup_message(interaction: discord.Interaction):
-    # 지정 채널 찾기
+@app_commands.guild_only()
+async def install_in_signup_channel(interaction: discord.Interaction):
     ch = discord.utils.get(interaction.guild.text_channels, name=SIGNUP_CHANNEL_NAME)
     if not ch:
         await interaction.response.send_message(
-            f"⚠️ '{SIGNUP_CHANNEL_NAME}' 채널을 찾지 못했습니다. 채널을 먼저 만들어 주세요.",
+            f"⚠️ '{SIGNUP_CHANNEL_NAME}' 채널을 찾지 못했습니다. 채널을 먼저 만들고 다시 실행하세요.",
             ephemeral=True
         )
         return
-
     view = StartSignupView()
-    msg = await ch.send("아래 버튼을 눌러 **가입 절차**를 시작하세요.", view=view)
+    await ch.send("아래 버튼을 눌러 **가입 절차**를 시작하세요.", view=view)
     await interaction.response.send_message(f"✅ 설치 완료: {ch.mention} 에 메시지를 생성했습니다. 고정(핀)해 두세요.", ephemeral=True)
+    print(f"[INFO] 설치 완료 by {interaction.user} in {interaction.guild} -> {ch}")
 
-# ===== 준비/동기화 =====
+# 현재 채널에 바로 설치하는 빠른 명령(디버그용)
+@tree.command(name="가입버튼", description="(디버그) 현재 채널에 가입 버튼 메시지를 생성")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.guild_only()
+async def install_here(interaction: discord.Interaction):
+    view = StartSignupView()
+    await interaction.response.send_message("아래 버튼을 눌러 **가입 절차**를 시작하세요.", view=view)
+    print(f"[INFO] 현재 채널 설치 by {interaction.user} in {interaction.channel}")
+
 @client.event
 async def on_ready():
     print(f"✅ 로그인: {client.user} (ID: {client.user.id})")
     try:
-        # 길드별 즉시 동기화(슬래시 바로 뜨게)
+        # 길드별 즉시 동기화(전파 지연 방지)
+        total = 0
         for guild in client.guilds:
-            await tree.sync(guild=guild)
+            synced = await tree.sync(guild=guild)
+            total += len(synced)
+            print(f"   - {guild.name}: {len(synced)}개 동기화")
+        print(f"✅ 슬래시 커맨드 총 {total}개 동기화 완료")
         # 재시작 후에도 버튼 동작하도록 View 재등록
         client.add_view(StartSignupView())
-        print("✅ 슬래시 커맨드 길드 동기화 완료")
     except Exception as e:
         print("슬래시 동기화 오류:", e)
 
