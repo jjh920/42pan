@@ -72,7 +72,7 @@ class SignupView(discord.ui.View):
         options=[
             discord.SelectOption(label="길드원"),
             discord.SelectOption(label="운영진"),
-            discord.SelectOption(label="관리자"),
+            discord.SelectOption(label="서버관리자"),
         ],
         row=0
     )
@@ -119,7 +119,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             return
 
         roles_to_add = []
-        if self.position_value in ("운영진", "관리자"):
+        if self.position_value in ("운영진", "서버관리자"):
             pos_role = find_role(guild, self.position_value)
             if pos_role:
                 roles_to_add.append(pos_role)
