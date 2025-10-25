@@ -73,7 +73,7 @@ class SignupView(discord.ui.View):
         options=[
             discord.SelectOption(label="길드원"),
             discord.SelectOption(label="운영진"),
-            discord.SelectOption(label="관리자(서버관리자문의)"),
+            discord.SelectOption(label="관리자(선택X!서버관리자문의)"),
         ],
         row=0
     )
@@ -101,7 +101,7 @@ class SignupView(discord.ui.View):
 
 class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
     nickname = discord.ui.TextInput(
-        label="당신의 닉네임은 무엇인가요?",
+        label="닉네임만 적어주세요!(서버 적지 마세요!!)",
         placeholder="예) 싸이판은멋쟁이",
         max_length=32,
         required=True
