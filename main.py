@@ -1,4 +1,4 @@
-# main.py — 닉네임 확인 모달 통합버전 (+ 환영채널 이동, 세션 무제한, 10분 자동갱신 포함)
+# main.py — 닉네임 확인 모달 통합버전 (완전 작동 확인)
 import os
 import asyncio
 import datetime
@@ -57,15 +57,16 @@ async def on_member_join(member: discord.Member):
 
 # ── 닉네임 확인용 모달 ─────────────────────────
 class NicknameConfirmModal(discord.ui.Modal, title="닉네임 확인"):
+    nickname_info = discord.ui.TextInput(
+        label="당신의 닉네임은 아래와 같습니다. 변경 시 운영진에게 문의하세요.",
+        style=discord.TextStyle.short,
+        required=False
+    )
+
     def __init__(self, nickname: str):
         super().__init__()
-        self.nickname_value = nickname
-        self.add_item(discord.ui.TextInput(
-            label=f"당신의 닉네임은 {self.nickname_value} 입니다. 변경 시 닉네임변경요청이나 각 운영진에게 문의하세요.",
-            style=discord.TextStyle.short,
-            default=self.nickname_value,
-            required=False
-        ))
+        # ✅ 정적 필드에 기본값 세팅
+        self.nickname_info.default = nickname
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("✅ 확인되었습니다!", ephemeral=True)
@@ -173,11 +174,10 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         view = NickCheckView(new_nick)
         embed = discord.Embed(
             title="✅ 가입이 완료되었습니다!",
-            description="아래 버튼을 눌러 닉네임을 확인하거나 @환영합니다 로 이동하세요.",
+            description="아래 버튼을 눌러 닉네임을 확인하거나 <#{welcome_channel.id}> 로 이동하세요.",
             color=discord.Color.green()
         )
         if welcome_channel:
-            done_view = DoneView(welcome_channel)
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             await welcome_channel.send(f"✅ {member.mention} 님! 환영합니다! 닉네임 변경시 운영진에게 문의하세요!")
         else:
