@@ -1,4 +1,4 @@
-# main.py — 2단계 모달 통합버전 (닉네임 입력 → 닉네임 확인 연속 표시)
+# main.py — 닉네임 입력 모달 단일 버전 (가입 완료 메시지로 변경)
 import os
 import asyncio
 import datetime
@@ -42,13 +42,11 @@ async def on_ready():
     print("♻️ 자동 가입버튼 갱신 루프 시작됨")
 
 
-# ── 연결 끊김 감지 로그 ───────────────────────────
 @client.event
 async def on_disconnect():
     print("⚠️ Discord 연결 끊김 → 자동 재연결 시도 중...")
 
 
-# ── 새 멤버 입장 시 '가입자' 역할 부여 ─────────────────────────
 @client.event
 async def on_member_join(member: discord.Member):
     if member.guild.id != GUILD_ID:
@@ -62,22 +60,7 @@ async def on_member_join(member: discord.Member):
             print(f"⚠️ 역할 부여 실패: {e}")
 
 
-# ── 닉네임 확인 모달 ─────────────────────────
-class NicknameConfirmModal(discord.ui.Modal, title="닉네임 확인"):
-    def __init__(self, nickname: str):
-        super().__init__()
-        self.add_item(discord.ui.TextInput(
-            label="당신의 닉네임은 아래와 같습니다. 변경 시 운영진에게 문의하세요.",
-            style=discord.TextStyle.short,
-            default=nickname,
-            required=False
-        ))
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.send_message("✅ 확인되었습니다!", ephemeral=True)
-
-
-# ── 닉네임 입력 모달 (→ 확인 모달 자동 연속 표시) ─────────────────────────
+# ── 닉네임 입력 모달 ─────────────────────────
 class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
     nickname = discord.ui.TextInput(
         label="서버는 적지 말고 닉네임만 적어주세요!",
@@ -115,15 +98,31 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         if join_role and join_role in member.roles:
             await member.remove_roles(join_role)
 
-        # ✅ 가입 완료 후, 닉네임 확인 모달 바로 띄우기
-        await interaction.response.send_modal(NicknameConfirmModal(new_nick))
-
-        # ✅ 환영 메시지 전송
+        # ✅ 가입 완료 메시지
         welcome_channel = find_channel(guild, WELCOME_CHANNEL_NAME)
         if welcome_channel:
-            await welcome_channel.send(
-                f"✅ {member.mention} 님! 환영합니다! 닉네임 변경 시 운영진에게 문의하세요!"
+            embed = discord.Embed(
+                title="✅ 가입이 완료되었습니다!",
+                description=f"아래 버튼을 눌러 <#{welcome_channel.id}> 로 이동하세요!",
+                color=discord.Color.green()
             )
+            view = DoneView(welcome_channel)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            await welcome_channel.send(f"✅ {member.mention} 님! 환영합니다! 닉네임 변경 시 운영진에게 문의하세요!")
+        else:
+            await interaction.response.send_message("가입 완료! (환영합니다 채널을 찾을 수 없습니다.)", ephemeral=True)
+
+
+# ── 환영채널 바로가기 버튼 ─────────────────────────
+class DoneView(discord.ui.View):
+    def __init__(self, welcome_channel: discord.TextChannel):
+        super().__init__(timeout=None)
+        url = f"https://discord.com/channels/{welcome_channel.guild.id}/{welcome_channel.id}"
+        self.add_item(discord.ui.Button(
+            label="환영합니다 채널 바로가기",
+            style=discord.ButtonStyle.link,
+            url=url
+        ))
 
 
 # ── 가입 절차 뷰 ─────────────────────────────
@@ -136,9 +135,7 @@ class SignupView(discord.ui.View):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "이 가입 절차는 본인만 진행할 수 있어요.", ephemeral=True
-            )
+            await interaction.response.send_message("이 가입 절차는 본인만 진행할 수 있어요.", ephemeral=True)
             return False
         return True
 
