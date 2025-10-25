@@ -1,4 +1,4 @@
-# main.py — 닉네임 확인 버튼 초록색 + 상호작용 실패 방지 + 세션 무제한 + 10분 자동 갱신 + 자동 재연결 로그 포함
+# main.py — 닉네임 확인 버튼: 초록색 + #환영합니다로 직접 이동 + 세션 무제한 + 자동 갱신 + 재연결 로그 포함
 import os
 import asyncio
 import discord
@@ -65,25 +65,15 @@ class DoneView(discord.ui.View):
         super().__init__(timeout=None)  # ✅ 세션 무제한
         self.welcome_channel = welcome_channel
 
-    @discord.ui.button(label="닉네임 확인하기", style=discord.ButtonStyle.green)
-    async def check_nick(self, interaction: discord.Interaction, button: discord.ui.Button):
-        try:
-            # ✅ 1. 응답 세션 유지
-            await interaction.response.defer(ephemeral=True)
-
-            # ✅ 2. 기존 메시지(가입 완료) 닫기
-            try:
-                await interaction.message.delete()
-            except discord.errors.NotFound:
-                pass
-
-            # ✅ 3. 새로운 안내 메시지 전송
-            await interaction.followup.send(
-                f"🔎 {self.welcome_channel.mention} 채널로 이동해서 닉네임을 확인해주세요!",
-                ephemeral=True
+        # ✅ 버튼을 URL 링크형으로 변경 (누르면 바로 #환영합니다 채널로 이동)
+        url = f"https://discord.com/channels/{welcome_channel.guild.id}/{welcome_channel.id}"
+        self.add_item(
+            discord.ui.Button(
+                label="닉네임 확인하기",
+                style=discord.ButtonStyle.green,  # 초록색
+                url=url  # 바로 이동 링크
             )
-        except Exception as e:
-            print(f"⚠️ 닉네임 확인 버튼 처리 실패: {e}")
+        )
 
 # ── 가입 절차용 뷰/모달 ─────────────────────
 class SignupView(discord.ui.View):
@@ -206,7 +196,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             if welcome_channel:
                 view = DoneView(welcome_channel)
                 await interaction.followup.send(
-                    "✅가입이 완료되었습니다! \n아래 **[닉네임 확인하기]** 버튼을 눌러 닉네임을 확인하세요!",
+                    "✅ 가입이 완료되었습니다! \n아래 **[닉네임 확인하기]** 버튼을 눌러 #환영합니다 채널로 이동하세요!",
                     view=view,
                     ephemeral=True
                 )
