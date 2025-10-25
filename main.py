@@ -1,4 +1,4 @@
-# main.py — 가입채널 제한 + 환영채널 안내 + 버튼 상호작용 수정 버전
+# main.py — 가입채널 제한 + 환영채널 안내 + 버튼 상호작용 수정 + Unknown interaction 해결 버전
 import os
 import discord
 from discord import app_commands
@@ -129,86 +129,4 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             roles_to_add.append(server_role)
 
         new_nick = f"{self.server_value}/{str(self.nickname)}"
-        await interaction.response.send_message("가입 승인중입니다…", ephemeral=True)
-
-        # 역할 부여 / 닉네임 변경 / 가입자 제거
-        if roles_to_add:
-            await member.add_roles(*roles_to_add, reason="가입 절차 완료 - 역할 부여")
-        await member.edit(nick=new_nick, reason="가입 절차 완료 - 닉네임 설정")
-        join_role = find_role(guild, "가입자")
-        if join_role and join_role in member.roles:
-            await member.remove_roles(join_role, reason="가입 절차 완료 - 가입자 제거")
-
-        # 환영 채널 안내
-        welcome_channel = find_channel(guild, WELCOME_CHANNEL_NAME)
-        if welcome_channel:
-            await interaction.followup.send(
-                f"가입이 완료되었습니다! 🎉\n {welcome_channel.mention} <<<<<<<버튼을 눌러서 닉네임이 잘 변경되었는지 확인!!",
-                ephemeral=True
-            )
-            await welcome_channel.send(
-                f"🎉 {member.mention} 님! 환영합니다! 🎊 닉네임 변경시 운영진 및 관리자에게 문의하세요!!"
-            )
-        else:
-            await interaction.followup.send("가입이 완료되었습니다! (환영 채널을 찾을 수 없습니다)", ephemeral=True)
-
-# ── /가입하기 명령어 ───────────────────────────────
-@tree.command(name="가입하기", description="가입 절차를 시작합니다.", guild=GUILD)
-@app_commands.guild_only()
-async def signup(interaction: discord.Interaction):
-    if interaction.channel.name != SIGNUP_CHANNEL_NAME:
-        await interaction.response.send_message(
-            f"이 명령은 #{SIGNUP_CHANNEL_NAME} 채널에서만 사용할 수 있습니다.",
-            ephemeral=True
-        )
-        return
-
-    view = SignupView(author_id=interaction.user.id)
-    await interaction.response.send_message(
-        "안녕하세요, 가입봇 42판입니다.\n"
-        "아래에서 **직위**와 **서버**를 선택한 뒤 **[다음]** 버튼을 눌러 닉네임을 입력해주세요.",
-        view=view,
-        ephemeral=True
-    )
-
-# ── 버튼 클릭으로 /가입하기와 동일한 절차 실행 ───────────────────
-class StartSignupView(discord.ui.View):
-    @discord.ui.button(label="가입하기", style=discord.ButtonStyle.green)
-    async def start_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # 1. 응답 예약 (에러 방지)
-        await interaction.response.defer(ephemeral=True)
-        # 2. 실제 가입 UI 띄우기
-        view = SignupView(author_id=interaction.user.id)
-        await interaction.followup.send(
-            "안녕하세요, 가입봇 42판입니다.\n"
-            "아래에서 **직위**와 **서버**를 선택한 뒤 **[다음]** 버튼을 눌러 닉네임을 입력해주세요.",
-            view=view,
-            ephemeral=True
-        )
-
-# ── 관리자용 명령: 가입 버튼 메시지 보내기 ─────────────────────────────
-@tree.command(name="가입버튼", description="가입하기 버튼 메시지를 보냅니다.", guild=GUILD)
-@app_commands.guild_only()
-async def send_signup_button(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("관리자만 사용할 수 있습니다.", ephemeral=True)
-        return
-
-    embed = discord.Embed(
-        title="🎉 서버 가입 절차 안내",
-        description="아래 **[가입하기]** 버튼을 눌러 가입 절차를 시작하세요!",
-        color=discord.Color.blurple()
-    )
-    await interaction.channel.send(embed=embed, view=StartSignupView())
-    await interaction.response.send_message("✅ 가입 버튼 메시지를 전송했습니다.", ephemeral=True)
-
-# ── 실행 ────────────────────────────────────
-if __name__ == "__main__":
-    token = os.getenv("DISCORD_TOKEN")
-    if not token:
-        raise RuntimeError("DISCORD_TOKEN 환경변수가 없습니다.")
-    try:
-        keep_alive()
-    except Exception:
-        pass
-    client.run(token)
+        await interaction.response.send_message("가입 승인중입니다…", ephemeral_
