@@ -1,5 +1,6 @@
-# main.py — 실질적 상호작용 만료 방지 완성 버전
+# main.py — 실질적 상호작용 만료 방지 + 15분 자동 갱신 버전
 import os
+import asyncio
 import discord
 from discord import app_commands
 from keep_alive import keep_alive
@@ -36,6 +37,10 @@ async def on_ready():
     synced = await tree.sync(guild=GUILD)
     print(f"✅ {len(synced)}개 명령 동기화 완료 (guild={GUILD_ID})")
 
+    # 🔁 자동 버튼 갱신 루프 시작
+    client.loop.create_task(refresh_signup_button())
+    print("♻️ 자동 가입버튼 갱신 루프 시작됨")
+
 # ── 새로 들어온 멤버에게 '가입자' 역할만 부여 ─────────────────────────
 @client.event
 async def on_member_join(member: discord.Member):
@@ -52,7 +57,7 @@ async def on_member_join(member: discord.Member):
 # ── 가입 절차용 뷰/모달 ─────────────────────
 class SignupView(discord.ui.View):
     def __init__(self, author_id: int):
-        super().__init__(timeout=None)  # 🔥 무제한 유지
+        super().__init__(timeout=None)
         self.author_id = author_id
         self.position_value = None
         self.server_value = None
@@ -248,6 +253,26 @@ async def send_signup_button(interaction: discord.Interaction):
         await interaction.channel.send(embed=embed, view=StartSignupView())
     except (discord.errors.InteractionResponded, discord.errors.NotFound):
         pass
+
+# ── 🔁 자동으로 15분마다 가입 버튼 메시지 갱신 ─────────────────────────
+async def refresh_signup_button():
+    await client.wait_until_ready()
+    while not client.is_closed():
+        guild = client.get_guild(GUILD_ID)
+        if guild:
+            channel = find_channel(guild, SIGNUP_CHANNEL_NAME)
+            if channel:
+                embed = discord.Embed(
+                    title="▶️ 서버 가입 절차 안내",
+                    description="아래 **[가입하기]** 버튼을 눌러 가입 절차를 시작하세요!",
+                    color=discord.Color.blurple()
+                )
+                try:
+                    await channel.send(embed=embed, view=StartSignupView())
+                    print("♻️ 가입 버튼 갱신됨")
+                except Exception as e:
+                    print(f"⚠️ 자동 갱신 실패: {e}")
+        await asyncio.sleep(600)  # 10분(600초) 간격
 
 # ── 실행 ────────────────────────────────────
 if __name__ == "__main__":
