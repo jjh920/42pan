@@ -199,7 +199,7 @@ async def send_signup_button(interaction: discord.Interaction):
 
     # 그 후 embed 전송
     embed = discord.Embed(
-        title="🎉 서버 가입 절차 안내",
+        title="▶️서버 가입 절차 안내",
         description="아래 **[가입하기]** 버튼을 눌러 가입 절차를 시작하세요!",
         color=discord.Color.blurple()
     )
