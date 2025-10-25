@@ -1,4 +1,4 @@
-# main.py — 닉네임 확인 버튼: 초록색 + #환영합니다로 직접 이동 + 세션 무제한 + 매 시간 10분 자동 갱신 + 재연결 로그 포함
+# main.py — 닉네임 확인 버튼: 초록색 + #환영합니다로 직접 이동 + 세션 무제한 + 매 10분 단위 자동 갱신 + 재연결 로그 포함
 import os
 import asyncio
 import datetime
@@ -252,16 +252,20 @@ async def send_signup_button(interaction: discord.Interaction):
     except (discord.errors.InteractionResponded, discord.errors.NotFound):
         pass
 
-# ── 🔁 매 시간 10분마다 가입 버튼 자동 갱신 ─────────────────────────
+# ── 🔁 매 10분 단위로 가입 버튼 자동 갱신 ─────────────────────────
 async def refresh_signup_button():
     await client.wait_until_ready()
     while not client.is_closed():
         now = datetime.datetime.now()
-        # 다음 ‘정시 + 10분’ 시각 계산
-        next_run = (now.replace(minute=10, second=0, microsecond=0)
-                    + datetime.timedelta(hours=1 if now.minute >= 10 else 0))
-        wait_seconds = (next_run - now).total_seconds()
 
+        # 🔸 현재 시각 기준 다음 10분 단위 시각 계산 (00, 10, 20, 30, 40, 50)
+        next_minute = ((now.minute // 10) + 1) * 10
+        if next_minute >= 60:
+            next_run = now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(hours=1)
+        else:
+            next_run = now.replace(minute=next_minute, second=0, microsecond=0)
+
+        wait_seconds = (next_run - now).total_seconds()
         print(f"🕒 다음 갱신 예정 시각: {next_run.strftime('%H:%M:%S')} (약 {int(wait_seconds)}초 후)")
         await asyncio.sleep(wait_seconds)
 
