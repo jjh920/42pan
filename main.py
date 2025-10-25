@@ -1,4 +1,4 @@
-# main.py — 10분 자동 세션 갱신 + 실질적 상호작용 만료 방지 + 자동 재연결 로그 포함
+# main.py — 10분 자동 세션 갱신 + 닉네임 확인 버튼 + 자동 재연결 로그 포함
 import os
 import asyncio
 import discord
@@ -46,7 +46,7 @@ async def on_ready():
 async def on_disconnect():
     print("⚠️ Discord 연결 끊김 → 자동 재연결 시도 중...")
 
-# ── 새로 들어온 멤버에게 '가입자' 역할만 부여 ─────────────────────────
+# ── 새로 들어온 멤버에게 '가입자' 역할 부여 ─────────────────────────
 @client.event
 async def on_member_join(member: discord.Member):
     if member.guild.id != GUILD_ID:
@@ -58,6 +58,19 @@ async def on_member_join(member: discord.Member):
             print(f"👋 {member}에게 '가입자' 역할 부여 완료")
         except Exception as e:
             print(f"⚠️ 역할 부여 실패: {e}")
+
+# ── 닉네임 확인 버튼 뷰 ───────────────────────────
+class DoneView(discord.ui.View):
+    def __init__(self, welcome_channel: discord.TextChannel):
+        super().__init__(timeout=None)
+        self.welcome_channel = welcome_channel
+
+    @discord.ui.button(label="닉네임 확인하기", style=discord.ButtonStyle.blurple)
+    async def check_nick(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(
+            f"🔎 {self.welcome_channel.mention} 채널로 이동해서 닉네임을 확인해주세요!",
+            ephemeral=True
+        )
 
 # ── 가입 절차용 뷰/모달 ─────────────────────
 class SignupView(discord.ui.View):
@@ -178,12 +191,14 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         welcome_channel = find_channel(guild, WELCOME_CHANNEL_NAME)
         try:
             if welcome_channel:
+                view = DoneView(welcome_channel)
                 await interaction.followup.send(
-                    f"가입이 완료되었습니다! 🎉\n{welcome_channel.mention} 채널에서 닉네임을 확인해주세요!",
+                    "가입이 완료되었습니다! \n아래 버튼을 눌러 닉네임을 확인해주세요!",
+                    view=view,
                     ephemeral=True
                 )
                 await welcome_channel.send(
-                    f"🎉 {member.mention} 님! 환영합니다! 🎊 닉네임 변경시 운영진에게 문의하세요!"
+                    f" {member.mention} 님! 환영합니다! 닉네임 변경시 운영진에게 문의하세요!"
                 )
             else:
                 await interaction.followup.send(
@@ -192,33 +207,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         except (discord.errors.InteractionResponded, discord.errors.NotFound):
             pass
 
-# ── /가입하기 명령어 ───────────────────────────────
-@tree.command(name="가입하기", description="가입 절차를 시작합니다.", guild=GUILD)
-@app_commands.guild_only()
-async def signup(interaction: discord.Interaction):
-    if interaction.channel.name != SIGNUP_CHANNEL_NAME:
-        try:
-            await interaction.response.send_message(
-                f"이 명령은 #{SIGNUP_CHANNEL_NAME} 채널에서만 사용할 수 있습니다.",
-                ephemeral=True
-            )
-        except Exception:
-            pass
-        return
-
-    try:
-        await interaction.response.defer(ephemeral=True)
-        view = SignupView(author_id=interaction.user.id)
-        await interaction.followup.send(
-            "안녕하세요, 가입봇 42판입니다.\n"
-            "아래에서 **직위**와 **서버**를 선택한 뒤 **[다음]** 버튼을 눌러 닉네임을 입력해주세요.",
-            view=view,
-            ephemeral=True
-        )
-    except Exception:
-        pass
-
-# ── 버튼 클릭 시 /가입하기와 동일한 절차 실행 ───────────────────
+# ── 가입 버튼 클릭 시 절차 실행 ───────────────────
 class StartSignupView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
