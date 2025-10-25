@@ -1,4 +1,4 @@
-# main.py — 가입채널 제한 + 환영채널 안내 버전
+# main.py — 가입채널 제한 + 환영채널 안내 + 입장 시 자동 안내 버전
 import os
 import discord
 from discord import app_commands
@@ -36,11 +36,13 @@ async def on_ready():
     synced = await tree.sync(guild=GUILD)
     print(f"✅ {len(synced)}개 길드 명령 동기화 완료 (guild={GUILD_ID})")
 
-# ── 새로 들어온 멤버에게 "가입자" 역할 부여 ─────────────────
+# ── 새로 들어온 멤버 처리 ──────────────────
 @client.event
 async def on_member_join(member: discord.Member):
     if member.guild.id != GUILD_ID:
         return
+
+    # '가입자' 역할 자동 부여
     role = find_role(member.guild, "가입자")
     if role:
         try:
@@ -50,6 +52,14 @@ async def on_member_join(member: discord.Member):
             print(f"⚠️ {member}에게 역할 부여 실패: {e}")
     else:
         print("❌ '가입자' 역할을 찾을 수 없습니다.")
+
+    # 가입안내 메시지 전송
+    signup_channel = find_channel(member.guild, SIGNUP_CHANNEL_NAME)
+    if signup_channel:
+        await signup_channel.send(
+            f"👋 {member.mention}님, 서버에 오신 걸 환영합니다!\n"
+            f"가입자 분들은 **#{SIGNUP_CHANNEL_NAME}** 채널에서 `/가입하기` 를 입력하여 가입 절차를 진행해주세요!"
+        )
 
 # ── 가입 절차용 뷰/모달 ─────────────────────
 class SignupView(discord.ui.View):
@@ -145,7 +155,9 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
                 f"가입이 완료되었습니다! 🎉\n {welcome_channel.mention} <<<<<<<버튼을 눌러서 닉네임이 잘 변경되었는지 확인!!",
                 ephemeral=True
             )
-            await welcome_channel.send(f"🎉 {member.mention} 님! 환영합니다! 🎊 닉네임 변경시 운영진 및 관리자에게 문의하세요!!")
+            await welcome_channel.send(
+                f"🎉 {member.mention} 님! 환영합니다! 🎊 닉네임 변경시 운영진 및 관리자에게 문의하세요!!"
+            )
         else:
             await interaction.followup.send("가입이 완료되었습니다! (환영 채널을 찾을 수 없습니다)", ephemeral=True)
 
