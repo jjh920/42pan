@@ -57,16 +57,15 @@ async def on_member_join(member: discord.Member):
 
 # ── 닉네임 확인용 모달 ─────────────────────────
 class NicknameConfirmModal(discord.ui.Modal, title="닉네임 확인"):
-    nickname_info = discord.ui.TextInput(
-        label="당신의 닉네임은 아래와 같습니다. 변경 시 운영진에게 문의하세요.",
-        style=discord.TextStyle.short,
-        required=False
-    )
-
     def __init__(self, nickname: str):
         super().__init__()
-        # ✅ 정적 필드에 기본값 세팅
-        self.nickname_info.default = nickname
+        # ✅ 안정적으로 TextInput을 동적으로 추가
+        self.add_item(discord.ui.TextInput(
+            label="당신의 닉네임은 아래와 같습니다. 변경 시 운영진에게 문의하세요.",
+            style=discord.TextStyle.short,
+            default=nickname,
+            required=False
+        ))
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("✅ 확인되었습니다!", ephemeral=True)
@@ -79,8 +78,8 @@ class NickCheckView(discord.ui.View):
 
     @discord.ui.button(label="내 닉네임 확인하기", style=discord.ButtonStyle.green)
     async def check_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        modal = NicknameConfirmModal(self.nickname)
-        await interaction.response.send_modal(modal)
+        # ✅ 모달 정상 작동
+        await interaction.response.send_modal(NicknameConfirmModal(self.nickname))
 
 # ── 환영채널 이동 버튼 ─────────────────────────
 class DoneView(discord.ui.View):
@@ -169,17 +168,17 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         if join_role and join_role in member.roles:
             await member.remove_roles(join_role)
 
-        # ✅ 가입 완료 메시지 + 닉네임 확인 버튼 + 환영채널 이동 버튼
+        # ✅ 가입 완료 메시지 + 닉네임 확인 버튼 + 환영채널 멘션
         welcome_channel = find_channel(guild, WELCOME_CHANNEL_NAME)
         view = NickCheckView(new_nick)
-        embed = discord.Embed(
-            title="✅ 가입이 완료되었습니다!",
-            description=f"아래 버튼을 눌러 닉네임을 확인하거나 <#{welcome_channel.id}> 로 이동하세요.",
-            color=discord.Color.green()
-        )
         if welcome_channel:
+            embed = discord.Embed(
+                title="✅ 가입이 완료되었습니다!",
+                description=f"아래 버튼을 눌러 닉네임을 확인하거나 <#{welcome_channel.id}> 로 이동하세요.",
+                color=discord.Color.green()
+            )
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-            await welcome_channel.send(f"✅ {member.mention} 님! 환영합니다! 닉네임 변경시 운영진에게 문의하세요!")
+            await welcome_channel.send(f"✅ {member.mention} 님! 환영합니다! 닉네임 변경시 닉네임변경요청방이나 운영진에게 문의하세요!")
         else:
             await interaction.response.send_message("가입 완료! (환영합니다채널을 찾을 수 없습니다.)", ephemeral=True)
 
