@@ -125,7 +125,7 @@ class SignupView(discord.ui.View):
         except Exception:
             pass
 
-    @discord.ui.button(label="다음 (닉네임 입력)", style=discord.ButtonStyle.primary, row=2)
+    @discord.ui.button(label="다음 (닉네임 입력)", style=discord.ButtonStyle.green, row=2)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self.position_value or not self.server_value:
             try:
