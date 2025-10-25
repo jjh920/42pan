@@ -53,14 +53,6 @@ async def on_member_join(member: discord.Member):
     else:
         print("❌ '가입자' 역할을 찾을 수 없습니다.")
 
-    # 가입안내 메시지 전송
-    signup_channel = find_channel(member.guild, SIGNUP_CHANNEL_NAME)
-    if signup_channel:
-        await signup_channel.send(
-            f"👋 {member.mention}님, 서버에 오신 걸 환영합니다!\n"
-            f"가입자 분들은 **#{SIGNUP_CHANNEL_NAME}** 채널에서 `/가입하기` 를 입력하여 가입 절차를 진행해주세요!"
-        )
-
 # ── 가입 절차용 뷰/모달 ─────────────────────
 class SignupView(discord.ui.View):
     def __init__(self, author_id: int, timeout: float | None = 180):
