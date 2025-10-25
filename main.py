@@ -1,4 +1,4 @@
-# main.py — 닉네임 확인 버튼 초록색 + 클릭 시 창 닫기 + 세션 무제한 + 10분 자동 갱신 + 자동 재연결 로그 포함
+# main.py — 닉네임 확인 버튼 초록색 + 상호작용 실패 방지 + 세션 무제한 + 10분 자동 갱신 + 자동 재연결 로그 포함
 import os
 import asyncio
 import discord
@@ -68,20 +68,27 @@ class DoneView(discord.ui.View):
     @discord.ui.button(label="닉네임 확인하기", style=discord.ButtonStyle.green)
     async def check_nick(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            # ✅ 현재 메시지(가입 완료) 닫기
-            await interaction.message.delete()
-            # ✅ 새 안내 메시지 표시
-            await interaction.response.send_message(
+            # ✅ 1. 응답 세션 유지
+            await interaction.response.defer(ephemeral=True)
+
+            # ✅ 2. 기존 메시지(가입 완료) 닫기
+            try:
+                await interaction.message.delete()
+            except discord.errors.NotFound:
+                pass
+
+            # ✅ 3. 새로운 안내 메시지 전송
+            await interaction.followup.send(
                 f"🔎 {self.welcome_channel.mention} 채널로 이동해서 닉네임을 확인해주세요!",
                 ephemeral=True
             )
-        except discord.errors.NotFound:
-            pass
+        except Exception as e:
+            print(f"⚠️ 닉네임 확인 버튼 처리 실패: {e}")
 
 # ── 가입 절차용 뷰/모달 ─────────────────────
 class SignupView(discord.ui.View):
     def __init__(self, author_id: int):
-        super().__init__(timeout=None)  # ✅ 세션 무제한
+        super().__init__(timeout=None)
         self.author_id = author_id
         self.position_value = None
         self.server_value = None
@@ -199,7 +206,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             if welcome_channel:
                 view = DoneView(welcome_channel)
                 await interaction.followup.send(
-                    "✅가입이 완료되었습니다! \n아래 버튼을 눌러 닉네임을 확인해주세요!",
+                    "✅가입이 완료되었습니다! \n아래 **[닉네임 확인하기]** 버튼을 눌러 닉네임을 확인하세요!",
                     view=view,
                     ephemeral=True
                 )
@@ -216,7 +223,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
 # ── 가입 버튼 클릭 시 절차 실행 ───────────────────
 class StartSignupView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None)  # ✅ 세션 무제한
+        super().__init__(timeout=None)
 
     @discord.ui.button(label="가입하기", style=discord.ButtonStyle.green)
     async def start_button(self, interaction: discord.Interaction, button: discord.ui.Button):
