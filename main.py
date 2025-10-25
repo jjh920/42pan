@@ -1,4 +1,4 @@
-# main.py — 가입채널 제한 + 환영채널 안내 (입장 안내 메시지 완전 제거)
+# main.py — 가입채널 제한 + 환영채널 안내 + "가입하기" 버튼 클릭 지원 버전
 import os
 import discord
 from discord import app_commands
@@ -51,8 +51,6 @@ async def on_member_join(member: discord.Member):
             print(f"⚠️ {member}에게 역할 부여 실패: {e}")
     else:
         print("❌ '가입자' 역할을 찾을 수 없습니다.")
-
-    # ❌ 안내 메시지 전송 부분 완전히 제거됨
 
 # ── 가입 절차용 뷰/모달 ─────────────────────
 class SignupView(discord.ui.View):
@@ -154,11 +152,10 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         else:
             await interaction.followup.send("가입이 완료되었습니다! (환영 채널을 찾을 수 없습니다)", ephemeral=True)
 
-# ── 명령어들 ────────────────────────────────
+# ── /가입하기 명령어 ───────────────────────────────
 @tree.command(name="가입하기", description="가입 절차를 시작합니다.", guild=GUILD)
 @app_commands.guild_only()
 async def signup(interaction: discord.Interaction):
-    # ✅ 특정 채널(#가입하기)에서만 허용
     if interaction.channel.name != SIGNUP_CHANNEL_NAME:
         await interaction.response.send_message(
             f"이 명령은 #{SIGNUP_CHANNEL_NAME} 채널에서만 사용할 수 있습니다.",
@@ -172,6 +169,28 @@ async def signup(interaction: discord.Interaction):
         view=view,
         ephemeral=True
     )
+
+# ── 버튼 클릭으로 /가입하기와 동일한 절차 실행 ───────────────────
+class StartSignupView(discord.ui.View):
+    @discord.ui.button(label="가입하기", style=discord.ButtonStyle.green)
+    async def start_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await signup(interaction)  # 동일한 함수 재사용
+
+# ── 관리자용 명령: 버튼메시지 보내기 ────────────────────────────────
+@tree.command(name="가입버튼", description="가입하기 버튼 메시지를 보냅니다.", guild=GUILD)
+@app_commands.guild_only()
+async def send_signup_button(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("관리자만 사용할 수 있습니다.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="🎉 서버 가입 절차 안내",
+        description="아래 **[가입하기]** 버튼을 눌러 가입 절차를 시작하세요!",
+        color=discord.Color.blurple()
+    )
+    await interaction.channel.send(embed=embed, view=StartSignupView())
+    await interaction.response.send_message("✅ 가입 버튼 메시지를 전송했습니다.", ephemeral=True)
 
 # ── 실행 ────────────────────────────────────
 if __name__ == "__main__":
