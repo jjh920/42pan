@@ -108,7 +108,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             )
             view = DoneView(welcome_channel)
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-            await welcome_channel.send(f"✅ {member.mention} 님! 환영합니다! 닉네임 변경 시 운영진에게 문의하세요!")
+            await welcome_channel.send(f"✅ {member.mention} 님! 환영합니다! 닉네임 변경 시 닉네임변경요청 방이나 운영진에게 문의하세요!")
         else:
             await interaction.response.send_message("가입 완료! (환영합니다 채널을 찾을 수 없습니다.)", ephemeral=True)
 
@@ -119,7 +119,7 @@ class DoneView(discord.ui.View):
         super().__init__(timeout=None)
         url = f"https://discord.com/channels/{welcome_channel.guild.id}/{welcome_channel.id}"
         self.add_item(discord.ui.Button(
-            label="환영합니다 채널 바로가기",
+            label="닉네임 확인하러 가기",
             style=discord.ButtonStyle.link,
             url=url
         ))
