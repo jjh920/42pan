@@ -1,4 +1,4 @@
-# main.py — 실질적 상호작용 만료 방지 + 15분 자동 갱신 버전
+# main.py — 10분 자동 세션 갱신 + 실질적 상호작용 만료 방지 + 자동 재연결 로그 포함
 import os
 import asyncio
 import discord
@@ -40,6 +40,11 @@ async def on_ready():
     # 🔁 자동 버튼 갱신 루프 시작
     client.loop.create_task(refresh_signup_button())
     print("♻️ 자동 가입버튼 갱신 루프 시작됨")
+
+# ── 연결 끊김 감지 로그 ───────────────────────────
+@client.event
+async def on_disconnect():
+    print("⚠️ Discord 연결 끊김 → 자동 재연결 시도 중...")
 
 # ── 새로 들어온 멤버에게 '가입자' 역할만 부여 ─────────────────────────
 @client.event
@@ -254,7 +259,7 @@ async def send_signup_button(interaction: discord.Interaction):
     except (discord.errors.InteractionResponded, discord.errors.NotFound):
         pass
 
-# ── 🔁 자동으로 15분마다 가입 버튼 메시지 갱신 ─────────────────────────
+# ── 🔁 자동으로 10분마다 가입 버튼 메시지 갱신 ─────────────────────────
 async def refresh_signup_button():
     await client.wait_until_ready()
     while not client.is_closed():
@@ -268,11 +273,18 @@ async def refresh_signup_button():
                     color=discord.Color.blurple()
                 )
                 try:
+                    # 기존 메시지 제거 후 새 버튼 등록 (최근 10개 검사)
+                    async for msg in channel.history(limit=10):
+                        if msg.author == client.user and msg.embeds:
+                            if msg.embeds[0].title == "▶️ 서버 가입 절차 안내":
+                                await msg.delete()
+
                     await channel.send(embed=embed, view=StartSignupView())
-                    print("♻️ 가입 버튼 갱신됨")
+                    print("♻️ 가입 버튼 갱신됨 (이전 메시지 삭제 후 재등록)")
                 except Exception as e:
                     print(f"⚠️ 자동 갱신 실패: {e}")
-        await asyncio.sleep(600)  # 10분(600초) 간격
+
+        await asyncio.sleep(600)  # 🔁 10분마다 갱신 (600초)
 
 # ── 실행 ────────────────────────────────────
 if __name__ == "__main__":
