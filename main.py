@@ -1,4 +1,4 @@
-# main.py — 가입채널 제한 + 환영채널 안내 (불필요한 안내 제거 버전)
+# main.py — 가입채널 제한 + 환영채널 안내 (입장 안내 메시지 완전 제거)
 import os
 import discord
 from discord import app_commands
@@ -36,7 +36,7 @@ async def on_ready():
     synced = await tree.sync(guild=GUILD)
     print(f"✅ {len(synced)}개 길드 명령 동기화 완료 (guild={GUILD_ID})")
 
-# ── 새로 들어온 멤버에게 '가입자' 역할 부여 + 안내 메시지 ──────────────
+# ── 새로 들어온 멤버에게 '가입자' 역할만 부여 ─────────────────────────
 @client.event
 async def on_member_join(member: discord.Member):
     if member.guild.id != GUILD_ID:
@@ -52,12 +52,7 @@ async def on_member_join(member: discord.Member):
     else:
         print("❌ '가입자' 역할을 찾을 수 없습니다.")
 
-    signup_channel = find_channel(member.guild, SIGNUP_CHANNEL_NAME)
-    if signup_channel:
-        await signup_channel.send(
-            f"👋 {member.mention}님, 서버에 오신 걸 환영합니다!\n"
-            f"가입자 분들은 **#{SIGNUP_CHANNEL_NAME}** 채널에서 `/가입하기` 를 입력하여 가입 절차를 진행해주세요!"
-        )
+    # ❌ 안내 메시지 전송 부분 완전히 제거됨
 
 # ── 가입 절차용 뷰/모달 ─────────────────────
 class SignupView(discord.ui.View):
