@@ -1,4 +1,4 @@
-# main.py — 가입채널 제한 + 환영채널 안내 + 입장 시 자동 안내 버전
+# main.py — 자동 가입안내 + 버튼 클릭으로 가입 절차 시작
 import os
 import discord
 from discord import app_commands
@@ -36,24 +36,7 @@ async def on_ready():
     synced = await tree.sync(guild=GUILD)
     print(f"✅ {len(synced)}개 길드 명령 동기화 완료 (guild={GUILD_ID})")
 
-# ── 새로 들어온 멤버 처리 ──────────────────
-@client.event
-async def on_member_join(member: discord.Member):
-    if member.guild.id != GUILD_ID:
-        return
-
-    # '가입자' 역할 자동 부여
-    role = find_role(member.guild, "가입자")
-    if role:
-        try:
-            await member.add_roles(role, reason="신규 입장 자동 부여")
-            print(f"👋 {member}에게 '가입자' 역할 부여 완료")
-        except Exception as e:
-            print(f"⚠️ {member}에게 역할 부여 실패: {e}")
-    else:
-        print("❌ '가입자' 역할을 찾을 수 없습니다.")
-
-# ── 가입 절차용 뷰/모달 ─────────────────────
+# ── 가입 절차 뷰 (기존 구조 그대로 유지) ─────────────────────
 class SignupView(discord.ui.View):
     def __init__(self, author_id: int, timeout: float | None = 180):
         super().__init__(timeout=timeout)
@@ -153,11 +136,10 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         else:
             await interaction.followup.send("가입이 완료되었습니다! (환영 채널을 찾을 수 없습니다)", ephemeral=True)
 
-# ── 명령어들 ────────────────────────────────
+# ── /가입하기 명령어 (재사용용) ─────────────────────────────
 @tree.command(name="가입하기", description="가입 절차를 시작합니다.", guild=GUILD)
 @app_commands.guild_only()
 async def signup(interaction: discord.Interaction):
-    # ✅ 특정 채널(#가입하기)에서만 허용
     if interaction.channel.name != SIGNUP_CHANNEL_NAME:
         await interaction.response.send_message(
             f"이 명령은 #{SIGNUP_CHANNEL_NAME} 채널에서만 사용할 수 있습니다.",
@@ -171,6 +153,43 @@ async def signup(interaction: discord.Interaction):
         view=view,
         ephemeral=True
     )
+
+# ── 버튼으로 가입 시작하기 (자동 안내용) ─────────────────────
+class StartSignupView(discord.ui.View):
+    @discord.ui.button(label="가입하기 시작하기", style=discord.ButtonStyle.green)
+    async def start_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await signup(interaction)  # 기존 가입창 바로 호출
+
+# ── 새로 들어온 멤버 처리 ─────────────────────────────────
+@client.event
+async def on_member_join(member: discord.Member):
+    if member.guild.id != GUILD_ID:
+        return
+
+    # 가입자 역할 자동 부여
+    role = find_role(member.guild, "가입자")
+    if role:
+        try:
+            await member.add_roles(role, reason="신규 입장 자동 부여")
+            print(f"👋 {member}에게 '가입자' 역할 부여 완료")
+        except Exception as e:
+            print(f"⚠️ {member}에게 역할 부여 실패: {e}")
+    else:
+        print("❌ '가입자' 역할을 찾을 수 없습니다.")
+
+    # #가입하기 채널에 안내 임베드 전송
+    signup_channel = find_channel(member.guild, SIGNUP_CHANNEL_NAME)
+    if signup_channel:
+        embed = discord.Embed(
+            title="🎉 서버에 오신 걸 환영합니다!",
+            description=(
+                f"가입자 분들은 아래 **[가입하기 시작하기]** 버튼을 눌러 "
+                f"가입 절차를 진행해주세요.\n\n"
+                f"📍 이 절차를 완료해야 서버의 다른 채널 이용이 가능합니다."
+            ),
+            color=discord.Color.blurple()
+        )
+        await signup_channel.send(embed=embed, view=StartSignupView())
 
 # ── 실행 ────────────────────────────────────
 if __name__ == "__main__":
