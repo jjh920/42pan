@@ -252,13 +252,43 @@ async def send_signup_button(interaction: discord.Interaction):
     except (discord.errors.InteractionResponded, discord.errors.NotFound):
         pass
 
-# ── 🔁 매 10분 단위로 가입 버튼 자동 갱신 ─────────────────────────
+# ── 🔁 처음 시작 시 즉시 1회 갱신 + 이후 10분 단위 자동 갱신 ─────────────────────────
 async def refresh_signup_button():
     await client.wait_until_ready()
+    guild = client.get_guild(GUILD_ID)
+    if not guild:
+        print("⚠️ Guild 정보를 불러올 수 없습니다.")
+        return
+
+    async def update_button():
+        """가입 버튼을 갱신하는 내부 함수"""
+        channel = find_channel(guild, SIGNUP_CHANNEL_NAME)
+        if not channel:
+            print("⚠️ 가입채널을 찾을 수 없습니다.")
+            return
+
+        embed = discord.Embed(
+            title="▶️ 서버 가입 절차 안내",
+            description="아래 **[가입하기]** 버튼을 눌러 가입 절차를 시작하세요!",
+            color=discord.Color.blurple()
+        )
+
+        try:
+            async for msg in channel.history(limit=10):
+                if msg.author == client.user and msg.embeds:
+                    if msg.embeds[0].title == "▶️ 서버 가입 절차 안내":
+                        await msg.delete()
+            await channel.send(embed=embed, view=StartSignupView())
+            print(f"♻️ [{datetime.datetime.now().strftime('%H:%M:%S')}] 가입 버튼 갱신됨")
+        except Exception as e:
+            print(f"⚠️ 자동 갱신 실패: {e}")
+
+    # 🔹 시작 시 즉시 1회 실행
+    await update_button()
+
+    # 🔹 이후 10분 단위 갱신 반복
     while not client.is_closed():
         now = datetime.datetime.now()
-
-        # 🔸 현재 시각 기준 다음 10분 단위 시각 계산 (00, 10, 20, 30, 40, 50)
         next_minute = ((now.minute // 10) + 1) * 10
         if next_minute >= 60:
             next_run = now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(hours=1)
@@ -269,24 +299,7 @@ async def refresh_signup_button():
         print(f"🕒 다음 갱신 예정 시각: {next_run.strftime('%H:%M:%S')} (약 {int(wait_seconds)}초 후)")
         await asyncio.sleep(wait_seconds)
 
-        guild = client.get_guild(GUILD_ID)
-        if guild:
-            channel = find_channel(guild, SIGNUP_CHANNEL_NAME)
-            if channel:
-                embed = discord.Embed(
-                    title="▶️ 서버 가입 절차 안내",
-                    description="아래 **[가입하기]** 버튼을 눌러 가입 절차를 시작하세요!",
-                    color=discord.Color.blurple()
-                )
-                try:
-                    async for msg in channel.history(limit=10):
-                        if msg.author == client.user and msg.embeds:
-                            if msg.embeds[0].title == "▶️ 서버 가입 절차 안내":
-                                await msg.delete()
-                    await channel.send(embed=embed, view=StartSignupView())
-                    print(f"♻️ [{datetime.datetime.now().strftime('%H:%M:%S')}] 가입 버튼 갱신됨")
-                except Exception as e:
-                    print(f"⚠️ 자동 갱신 실패: {e}")
+        await update_button()
 
 # ── 실행 ────────────────────────────────────
 if __name__ == "__main__":
