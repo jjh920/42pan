@@ -1,6 +1,7 @@
-# main.py — 닉네임 확인 버튼: 초록색 + #환영합니다로 직접 이동 + 세션 무제한 + 자동 갱신 + 재연결 로그 포함
+# main.py — 닉네임 확인 버튼: 초록색 + #환영합니다로 직접 이동 + 세션 무제한 + 매 시간 10분 자동 갱신 + 재연결 로그 포함
 import os
 import asyncio
+import datetime
 import discord
 from discord import app_commands
 from keep_alive import keep_alive
@@ -65,13 +66,13 @@ class DoneView(discord.ui.View):
         super().__init__(timeout=None)  # ✅ 세션 무제한
         self.welcome_channel = welcome_channel
 
-        # ✅ 버튼을 URL 링크형으로 변경 (누르면 바로 #환영합니다 채널로 이동)
+        # ✅ #환영합니다 채널로 직접 이동하는 URL 버튼
         url = f"https://discord.com/channels/{welcome_channel.guild.id}/{welcome_channel.id}"
         self.add_item(
             discord.ui.Button(
                 label="닉네임 확인하기",
                 style=discord.ButtonStyle.green,  # 초록색
-                url=url  # 바로 이동 링크
+                url=url  # 직접 이동 링크
             )
         )
 
@@ -196,7 +197,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             if welcome_channel:
                 view = DoneView(welcome_channel)
                 await interaction.followup.send(
-                    "✅ 가입이 완료되었습니다! \n아래 **[닉네임 확인하기]** 버튼을 눌러 닉네임을 확인해주세요!",
+                    "✅ 가입이 완료되었습니다! \n아래 **[닉네임 확인하기]** 버튼을 눌러 닉네임을 확인하세요!",
                     view=view,
                     ephemeral=True
                 )
@@ -251,10 +252,19 @@ async def send_signup_button(interaction: discord.Interaction):
     except (discord.errors.InteractionResponded, discord.errors.NotFound):
         pass
 
-# ── 🔁 자동으로 10분마다 가입 버튼 메시지 갱신 ─────────────────────────
+# ── 🔁 매 시간 10분마다 가입 버튼 자동 갱신 ─────────────────────────
 async def refresh_signup_button():
     await client.wait_until_ready()
     while not client.is_closed():
+        now = datetime.datetime.now()
+        # 다음 ‘정시 + 10분’ 시각 계산
+        next_run = (now.replace(minute=10, second=0, microsecond=0)
+                    + datetime.timedelta(hours=1 if now.minute >= 10 else 0))
+        wait_seconds = (next_run - now).total_seconds()
+
+        print(f"🕒 다음 갱신 예정 시각: {next_run.strftime('%H:%M:%S')} (약 {int(wait_seconds)}초 후)")
+        await asyncio.sleep(wait_seconds)
+
         guild = client.get_guild(GUILD_ID)
         if guild:
             channel = find_channel(guild, SIGNUP_CHANNEL_NAME)
@@ -270,10 +280,9 @@ async def refresh_signup_button():
                             if msg.embeds[0].title == "▶️ 서버 가입 절차 안내":
                                 await msg.delete()
                     await channel.send(embed=embed, view=StartSignupView())
-                    print("♻️ 가입 버튼 갱신됨 (이전 메시지 삭제 후 재등록)")
+                    print(f"♻️ [{datetime.datetime.now().strftime('%H:%M:%S')}] 가입 버튼 갱신됨")
                 except Exception as e:
                     print(f"⚠️ 자동 갱신 실패: {e}")
-        await asyncio.sleep(600)
 
 # ── 실행 ────────────────────────────────────
 if __name__ == "__main__":
