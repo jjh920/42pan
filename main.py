@@ -196,7 +196,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             if welcome_channel:
                 view = DoneView(welcome_channel)
                 await interaction.followup.send(
-                    "✅ 가입이 완료되었습니다! \n아래 **[닉네임 확인하기]** 버튼을 눌러 #환영합니다 채널로 이동하세요!",
+                    "✅ 가입이 완료되었습니다! \n아래 **[닉네임 확인하기]** 버튼을 눌러 닉네임을 확인해주세요!",
                     view=view,
                     ephemeral=True
                 )
