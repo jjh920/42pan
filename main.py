@@ -1,4 +1,4 @@
-# main.py — 가입채널 제한 + 환영채널 안내 버전 (원래 버전 복원)
+# main.py — 가입채널 제한 + 환영채널 안내 (불필요한 안내 제거 버전)
 import os
 import discord
 from discord import app_commands
