@@ -174,7 +174,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         view = NickCheckView(new_nick)
         embed = discord.Embed(
             title="✅ 가입이 완료되었습니다!",
-            description="아래 버튼을 눌러 닉네임을 확인하거나 <#{welcome_channel.id}> 로 이동하세요.",
+            description=f"아래 버튼을 눌러 닉네임을 확인하거나 <#{welcome_channel.id}> 로 이동하세요.",
             color=discord.Color.green()
         )
         if welcome_channel:
