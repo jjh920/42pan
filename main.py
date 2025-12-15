@@ -117,11 +117,11 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         welcome_channel = find_channel(guild, WELCOME_CHANNEL_NAME)
 
         embed = discord.Embed(
-            title="🎉 가입이 완료되었습니다!",
+            title="✅ 가입이 완료되었습니다!",
             description=(
                 "# 환영합니다!\n\n"
                 "# 아래 버튼을 눌러\n"
-                "# 환영 채널로 이동해주세요** 👇"
+                "# 👇환영 채널로 이동해주세요. "
             ),
             color=discord.Color.green()
         )
