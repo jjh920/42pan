@@ -1,8 +1,7 @@
-# main.py — 최종 통합 가입봇 (에러 수정 완료)
+# main.py — 최종 통합 가입봇 (선택 유지 + 안정화 완료)
 
 import os
 import asyncio
-import datetime
 import discord
 from discord import app_commands
 from keep_alive import keep_alive
@@ -46,7 +45,6 @@ async def on_ready():
         pass
     await tree.sync(guild=GUILD)
     client.loop.create_task(refresh_signup_button())
-    print("♻️ 가입 버튼 자동 갱신 시작")
 
 # ───────────────── 신규 입장 ─────────────────
 @client.event
@@ -55,7 +53,7 @@ async def on_member_join(member: discord.Member):
         return
     role = find_role(member.guild, "가입자")
     if role:
-        await member.add_roles(role, reason="신규 입장")
+        await member.add_roles(role)
 
 # ───────────────── 닉네임 모달 ─────────────────
 class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
@@ -76,46 +74,39 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         guild = interaction.guild
         member = interaction.user
 
-        # 닉네임 설정
-        new_nick = f"{self.server_name}/{self.server_channel}/{self.nickname}"
+        # 닉네임
         try:
-            await member.edit(nick=new_nick)
+            await member.edit(
+                nick=f"{self.server_name}/{self.server_channel}/{self.nickname}"
+            )
         except Exception:
             pass
 
-        roles_to_add = []
+        roles = []
 
-        # 1️⃣ 서버명 역할
-        r = find_role(guild, self.server_name)
-        if r:
-            roles_to_add.append(r)
+        for role_name in (
+            self.server_name,
+            f"{self.server_name} {self.server_channel}",
+            self.position
+        ):
+            r = find_role(guild, role_name)
+            if r:
+                roles.append(r)
 
-        # 2️⃣ 서버명 + 서버채널 역할
-        combined = f"{self.server_name} {self.server_channel}"
-        r = find_role(guild, combined)
-        if r:
-            roles_to_add.append(r)
+        if roles:
+            await member.add_roles(*roles)
 
-        # 3️⃣ 직책 역할
-        r = find_role(guild, self.position)
-        if r:
-            roles_to_add.append(r)
-
-        if roles_to_add:
-            await member.add_roles(*roles_to_add)
-
-        # 가입자 역할 제거
         join_role = find_role(guild, "가입자")
         if join_role:
             await member.remove_roles(join_role)
 
-        # 완료 메시지
         welcome = find_channel(guild, WELCOME_CHANNEL_NAME)
         embed = discord.Embed(
             title="✅ 가입 완료!",
             description=f"<#{welcome.id}> 채널로 이동해주세요.",
             color=discord.Color.green()
         )
+
         await interaction.response.send_message(
             embed=embed,
             view=DoneView(welcome),
@@ -147,7 +138,7 @@ class SignupView(discord.ui.View):
     async def interaction_check(self, interaction):
         if interaction.user.id != self.author_id:
             await interaction.response.send_message(
-                "이 가입 절차는 본인만 진행할 수 있습니다.",
+                "본인만 진행할 수 있습니다.",
                 ephemeral=True
             )
             return False
@@ -165,6 +156,8 @@ class SignupView(discord.ui.View):
     )
     async def select_position(self, interaction, select):
         self.position = select.values[0]
+        for opt in self.select_position.options:
+            opt.default = (opt.label == self.position)
         await interaction.response.defer()
 
     # 서버명 선택
@@ -175,13 +168,19 @@ class SignupView(discord.ui.View):
     )
     async def select_server_name(self, interaction, select):
         self.server_name = select.values[0]
+
+        for opt in self.select_server_name.options:
+            opt.default = (opt.label == self.server_name)
+
+        self.server_channel = None
         self.server_channel_select.options = [
             discord.SelectOption(label=v, value=v)
             for v in SERVER_MAP[self.server_name]
         ]
+
         await interaction.response.edit_message(view=self)
 
-    # 서버채널 선택 (더미 옵션 필수)
+    # 서버채널 선택
     @discord.ui.select(
         placeholder="서버 채널 선택",
         options=[discord.SelectOption(label="서버명을 먼저 선택하세요", value="__dummy__")],
@@ -194,10 +193,14 @@ class SignupView(discord.ui.View):
                 ephemeral=True
             )
             return
+
         self.server_channel = select.values[0]
+        for opt in self.server_channel_select.options:
+            opt.default = (opt.label == self.server_channel)
+
         await interaction.response.defer()
 
-    # 다음 버튼
+    # 다음
     @discord.ui.button(label="다음 (닉네임 입력)", style=discord.ButtonStyle.green, row=3)
     async def next_button(self, interaction, button):
         if not all([self.position, self.server_name, self.server_channel]):
@@ -206,6 +209,7 @@ class SignupView(discord.ui.View):
                 ephemeral=True
             )
             return
+
         await interaction.response.send_modal(
             NicknameModal(self.position, self.server_name, self.server_channel)
         )
@@ -250,8 +254,6 @@ async def signup_button(interaction: discord.Interaction):
 async def refresh_signup_button():
     await client.wait_until_ready()
     guild = client.get_guild(GUILD_ID)
-    if not guild:
-        return
 
     async def update():
         channel = find_channel(guild, SIGNUP_CHANNEL_NAME)
@@ -269,7 +271,6 @@ async def refresh_signup_button():
             color=discord.Color.blurple()
         )
         await channel.send(embed=embed, view=StartSignupView())
-        print("♻️ 가입 버튼 갱신")
 
     await update()
     while True:
