@@ -120,7 +120,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             title="# ✅ 가입 완료!",
             description=(
                 "# 아래 버튼을 눌러\n"
-                "# **환영 채널로 이동해주세요** 👇"
+                "# 👇**환영 채널로 이동해주세요** "
             ),
             color=discord.Color.green()
         )
