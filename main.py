@@ -115,7 +115,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             description=(
                 "# 환영합니다!\n\n"
                 "# 아래 버튼을 눌러\n"
-                "# **환영 채널로 이동해주세요** 👇"
+                "#👇 **환영 채널로 이동해주세요** "
             ),
             color=discord.Color.green()
         )
@@ -192,12 +192,19 @@ class SignupView(discord.ui.View):
             self.server_name = select.values[0]
             self.server_channel = None
 
-            # 서버채널 Select만 교체
+            # 기존 서버채널 제거
             if self.server_channel_select:
                 self.remove_item(self.server_channel_select)
 
+            # ⚠️ 다음 버튼 제거 (row 순서 보장)
+            self.remove_item(self.next_button)
+
+            # 서버채널 추가 (row=2)
             self.server_channel_select = self.make_server_channel_select()
             self.add_item(self.server_channel_select)
+
+            # 다음 버튼 재추가 (row=3)
+            self.add_item(self.next_button)
 
             try:
                 await interaction.message.edit(view=self)
@@ -208,121 +215,4 @@ class SignupView(discord.ui.View):
         return select
 
     # ── 서버채널 Select ──
-    def make_server_channel_select(self):
-        select = discord.ui.Select(
-            placeholder="서버 채널 선택",
-            options=[
-                discord.SelectOption(label=v, value=v)
-                for v in SERVER_MAP.get(self.server_name, [])
-            ],
-            row=2
-        )
-
-        async def callback(interaction: discord.Interaction):
-            await interaction.response.defer()
-            self.server_channel = select.values[0]
-
-        select.callback = callback
-        return select
-
-    # ── 다음 버튼 ──
-    def make_next_button(self):
-        button = discord.ui.Button(
-            label="다음 (닉네임 입력)",
-            style=discord.ButtonStyle.green,
-            row=3
-        )
-
-        async def callback(interaction: discord.Interaction):
-            if not all([self.position, self.server_name, self.server_channel]):
-                await interaction.response.send_message(
-                    "모든 항목을 선택해주세요.",
-                    ephemeral=True
-                )
-                return
-
-            await interaction.response.send_modal(
-                NicknameModal(
-                    self.position,
-                    self.server_name,
-                    self.server_channel
-                )
-            )
-
-        button.callback = callback
-        return button
-
-# ───────────────── 시작 버튼 ─────────────────
-class StartSignupView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=600)
-
-    @discord.ui.button(label="가입하기", style=discord.ButtonStyle.green)
-    async def start(self, interaction, button):
-        await interaction.response.defer(ephemeral=True)
-        await interaction.followup.send(
-            "직책 → 서버명 → 서버채널 → 닉네임 순서로 진행하세요.",
-            view=SignupView(interaction.user.id),
-            ephemeral=True
-        )
-
-# ───────────────── 관리자 명령 ─────────────────
-@tree.command(name="가입버튼", description="가입 버튼 생성", guild=GUILD)
-@app_commands.guild_only()
-async def signup_button(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message(
-            "관리자만 사용할 수 있습니다.",
-            ephemeral=True
-        )
-        return
-
-    await interaction.response.send_message(
-        "✅ 가입 버튼을 생성했습니다.",
-        ephemeral=True
-    )
-
-    embed = discord.Embed(
-        title="▶️ 서버 가입 안내",
-        description="아래 버튼을 눌러 가입 절차를 시작하세요.",
-        color=discord.Color.blurple()
-    )
-    await interaction.channel.send(embed=embed, view=StartSignupView())
-
-# ───────────────── 자동 갱신 ─────────────────
-async def refresh_signup_button():
-    await client.wait_until_ready()
-    guild = client.get_guild(GUILD_ID)
-
-    async def update():
-        channel = find_channel(guild, SIGNUP_CHANNEL_NAME)
-        if not channel:
-            return
-
-        async for msg in channel.history(limit=10):
-            if msg.author == client.user and msg.embeds:
-                if msg.embeds[0].title == "▶️ 서버 가입 안내":
-                    try:
-                        await msg.delete()
-                    except discord.NotFound:
-                        pass
-
-        embed = discord.Embed(
-            title="▶️ 서버 가입 안내",
-            description="아래 버튼을 눌러 가입하세요.",
-            color=discord.Color.blurple()
-        )
-        await channel.send(embed=embed, view=StartSignupView())
-
-    await update()
-    while True:
-        await asyncio.sleep(600)
-        await update()
-
-# ───────────────── 실행 ─────────────────
-if __name__ == "__main__":
-    token = os.getenv("DISCORD_TOKEN")
-    if not token:
-        raise RuntimeError("DISCORD_TOKEN 환경변수가 없습니다.")
-    keep_alive()
-    client.run(token)
+    def make_server_c
