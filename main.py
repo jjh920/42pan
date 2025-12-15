@@ -69,7 +69,7 @@ class DoneView(discord.ui.View):
 class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
     nickname = discord.ui.TextInput(
         label="닉네임만 입력해주세요",
-        placeholder="예) 싸이판은멋쟁이",
+        placeholder="예) 싸이판",
         max_length=20,
         required=True
     )
@@ -114,8 +114,8 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             title="✅ 가입 완료!",
             description=(
                 "# 환영합니다!\n\n"
-                "#아래 버튼을 눌러\n"
-                "#👇 **환영 채널로 이동해주세요** "
+                "# 아래 버튼을 눌러\n"
+                "# **환영 채널로 이동해주세요** 👇"
             ),
             color=discord.Color.green()
         )
@@ -136,13 +136,19 @@ class SignupView(discord.ui.View):
     def __init__(self, author_id: int):
         super().__init__(timeout=600)
         self.author_id = author_id
+
         self.position = None
         self.server_name = None
         self.server_channel = None
 
-        self.add_item(self.make_position_select())
-        self.add_item(self.make_server_name_select())
-        self.add_item(self.make_next_button())
+        self.position_select = self.make_position_select()
+        self.server_name_select = self.make_server_name_select()
+        self.server_channel_select = None
+        self.next_button = self.make_next_button()
+
+        self.add_item(self.position_select)
+        self.add_item(self.server_name_select)
+        self.add_item(self.next_button)
 
     async def interaction_check(self, interaction):
         if interaction.user.id != self.author_id:
@@ -182,15 +188,16 @@ class SignupView(discord.ui.View):
 
         async def callback(interaction: discord.Interaction):
             await interaction.response.defer()
+
             self.server_name = select.values[0]
             self.server_channel = None
 
-            # 기존 서버채널 Select 제거
-            self.clear_items()
-            self.add_item(self.make_position_select())
-            self.add_item(self.make_server_name_select())
-            self.add_item(self.make_server_channel_select())
-            self.add_item(self.make_next_button())
+            # 서버채널 Select만 교체
+            if self.server_channel_select:
+                self.remove_item(self.server_channel_select)
+
+            self.server_channel_select = self.make_server_channel_select()
+            self.add_item(self.server_channel_select)
 
             try:
                 await interaction.message.edit(view=self)
@@ -200,16 +207,14 @@ class SignupView(discord.ui.View):
         select.callback = callback
         return select
 
-    # ── 서버채널 Select (⭐ 핵심) ──
+    # ── 서버채널 Select ──
     def make_server_channel_select(self):
-        options = [
-            discord.SelectOption(label=v, value=v)
-            for v in SERVER_MAP.get(self.server_name, [])
-        ]
-
         select = discord.ui.Select(
             placeholder="서버 채널 선택",
-            options=options,
+            options=[
+                discord.SelectOption(label=v, value=v)
+                for v in SERVER_MAP.get(self.server_name, [])
+            ],
             row=2
         )
 
@@ -237,7 +242,11 @@ class SignupView(discord.ui.View):
                 return
 
             await interaction.response.send_modal(
-                NicknameModal(self.position, self.server_name, self.server_channel)
+                NicknameModal(
+                    self.position,
+                    self.server_name,
+                    self.server_channel
+                )
             )
 
         button.callback = callback
@@ -262,10 +271,16 @@ class StartSignupView(discord.ui.View):
 @app_commands.guild_only()
 async def signup_button(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("관리자만 사용할 수 있습니다.", ephemeral=True)
+        await interaction.response.send_message(
+            "관리자만 사용할 수 있습니다.",
+            ephemeral=True
+        )
         return
 
-    await interaction.response.send_message("✅ 가입 버튼을 생성했습니다.", ephemeral=True)
+    await interaction.response.send_message(
+        "✅ 가입 버튼을 생성했습니다.",
+        ephemeral=True
+    )
 
     embed = discord.Embed(
         title="▶️ 서버 가입 안내",
