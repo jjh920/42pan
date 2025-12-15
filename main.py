@@ -1,4 +1,4 @@
-# main.py — 최종 통합 가입봇 (완전 안정화 버전)
+# main.py — 최종 통합 가입봇 (완전 안정화 + 404 방어 포함)
 
 import os
 import asyncio
@@ -61,7 +61,7 @@ class DoneView(discord.ui.View):
         super().__init__(timeout=300)
         self.add_item(
             discord.ui.Button(
-                label="👉 환영 채널로 이동하기",
+                label="환영 채널로 이동하기👈",
                 style=discord.ButtonStyle.link,
                 url=f"https://discord.com/channels/{channel.guild.id}/{channel.id}"
             )
@@ -113,15 +113,14 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         if join_role:
             await member.remove_roles(join_role)
 
-        # 완료 메시지
         welcome_channel = find_channel(guild, WELCOME_CHANNEL_NAME)
 
         embed = discord.Embed(
-            title="🎉 가입이 완료되었습니다!",
+            title="# ✅ 가입 완료!!",
             description=(
                 "# 환영합니다!\n\n"
                 "# 아래 버튼을 눌러\n"
-                "# 👇 **환영 채널로 이동해주세요**"
+                "#👇 **환영 채널로 이동해주세요** "
             ),
             color=discord.Color.green()
         )
@@ -134,10 +133,10 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
 
         await welcome_channel.send(
             f"✅ {member.mention} 님 환영합니다!\n"
-            f"닉네임 변경은 닉네임변경요청방이나 운영진에게 문의해주세요."
+            f"닉네임 변경은 닉네임변경요청방 및 운영진에게 문의해주세요."
         )
 
-# ───────────────── 가입 뷰 ────────────────────
+# ───────────────── 가입 View ─────────────────
 class SignupView(discord.ui.View):
     def __init__(self, author_id: int):
         super().__init__(timeout=600)
@@ -161,7 +160,7 @@ class SignupView(discord.ui.View):
         options=[
             discord.SelectOption(label="길드원"),
             discord.SelectOption(label="운영진"),
-            discord.SelectOption(label="관리자(서버관리자문의 선택X)")
+            discord.SelectOption(label="관리자(서버관리자문의)")
         ],
         row=0
     )
@@ -190,7 +189,12 @@ class SignupView(discord.ui.View):
             for v in SERVER_MAP[self.server_name]
         ]
 
-        await interaction.message.edit(view=self)
+        # 🔒 404 Unknown Message 방어
+        try:
+            await interaction.message.edit(view=self)
+        except (discord.NotFound, discord.HTTPException):
+            # 메시지가 이미 삭제/만료된 경우 → 무시
+            return
 
     # 서버채널 선택
     @discord.ui.select(
@@ -277,7 +281,10 @@ async def refresh_signup_button():
         async for msg in channel.history(limit=10):
             if msg.author == client.user and msg.embeds:
                 if msg.embeds[0].title == "▶️ 서버 가입 안내":
-                    await msg.delete()
+                    try:
+                        await msg.delete()
+                    except discord.NotFound:
+                        pass
 
         embed = discord.Embed(
             title="▶️ 서버 가입 안내",
