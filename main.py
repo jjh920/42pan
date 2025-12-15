@@ -61,7 +61,7 @@ class DoneView(discord.ui.View):
         super().__init__(timeout=None)
         self.add_item(
             discord.ui.Button(
-                label="👉 환영 채널로 이동하기 👈",
+                label="환영 채널로 이동하기 👈",
                 style=discord.ButtonStyle.link,
                 url=f"https://discord.com/channels/{channel.guild.id}/{channel.id}"
             )
@@ -119,9 +119,9 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         embed = discord.Embed(
             title="🎉 가입이 완료되었습니다!",
             description=(
-                "## 👋 환영합니다!\n\n"
-                "### 🚪 아래 버튼을 눌러\n"
-                "### **환영 채널로 이동해주세요** 👇"
+                "# 환영합니다!\n\n"
+                "# 아래 버튼을 눌러\n"
+                "# 환영 채널로 이동해주세요** 👇"
             ),
             color=discord.Color.green()
         )
@@ -133,8 +133,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         )
 
         await welcome_channel.send(
-            f"🎊 {member.mention} 님이 서버에 가입하셨습니다!\n"
-            f"필독 사항을 확인해주세요 🙌"
+            f"✅ {member.mention} 님 닉네임 변경 시 닉네임변경요청방이나 운영진에게 문의하세요!!\n"
         )
 
 # ───────────────── 가입 뷰 ────────────────────
