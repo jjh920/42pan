@@ -132,7 +132,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         )
 
         await welcome_channel.send(
-            f" {member.mention} 님 닉네임 변경 시 닉네임변경요청 방이나 운영진에게 문의하세요!!\n"
+            f"✅ {member.mention} 님 닉네임 변경 시 닉네임변경요청 방이나 운영진에게 문의하세요!!\n"
         )
 
 # ───────────────── 가입 뷰 ────────────────────
