@@ -126,11 +126,16 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             color=discord.Color.green()
         )
 
-        await interaction.response.send_message(
+        # 🔒 먼저 응답 확정 (중요)
+        await interaction.response.defer(ephemeral=True)
+        
+        # 🔒 이후 메시지는 followup으로
+        await interaction.followup.send(
             embed=embed,
             view=DoneView(welcome_channel),
             ephemeral=True
         )
+
 
         await welcome_channel.send(
             f"✅ {member.mention} 님 닉네임 변경 시 닉네임변경요청방이나 운영진에게 문의하세요!!\n"
