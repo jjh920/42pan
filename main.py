@@ -165,7 +165,7 @@ class SignupView(discord.ui.View):
         options=[
             discord.SelectOption(label="길드원"),
             discord.SelectOption(label="운영진"),
-            discord.SelectOption(label="서버관리자")
+            discord.SelectOption(label="관리자 (선택 X) 서버관리자에게 문의하세요 서버관리자:링꼬")
         ],
         row=0
     )
