@@ -1,4 +1,4 @@
-# main.py — 최종 통합 가입봇 (안정화 패치 적용)
+# main.py — 통합 최종 가입봇 (안정성 + UX 버그 수정 완료)
 
 import os
 import asyncio
@@ -44,13 +44,12 @@ async def on_ready():
         tree.copy_global_to(guild=GUILD)
     except Exception:
         pass
-
     await tree.sync(guild=GUILD)
 
-    # ✅ 백그라운드 태스크 중복 + 사망 방지
+    # 백그라운드 태스크 중복/사망 방지
     if not hasattr(client, "signup_task") or client.signup_task.done():
         client.signup_task = client.loop.create_task(refresh_signup_button())
-        print("🔁 refresh_signup_button task started")
+        print("🔁 refresh_signup_button started")
 
 # ───────────────── 신규 입장 ─────────────────
 @client.event
@@ -97,18 +96,18 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
                 nick=f"{self.server_name}/{self.server_channel}/{self.nickname}"
             )
 
-            roles_to_add = []
-            for role_name in (
+            roles = []
+            for name in (
                 self.server_name,
                 f"{self.server_name} {self.server_channel}",
                 self.position
             ):
-                r = find_role(guild, role_name)
+                r = find_role(guild, name)
                 if r:
-                    roles_to_add.append(r)
+                    roles.append(r)
 
-            if roles_to_add:
-                await member.add_roles(*roles_to_add)
+            if roles:
+                await member.add_roles(*roles)
 
             join_role = find_role(guild, "가입자")
             if join_role:
@@ -134,7 +133,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
             )
 
             await welcome_channel.send(
-                f"✅ {member.mention} 님 닉네임 변경 시 닉네임변경요청방이나 운영진에게 문의하세요!!"
+                f"✅ {member.mention} 님 닉네임 변경은 닉네임변경요청방이나 운영진에게 문의하세요."
             )
 
         except Exception as e:
@@ -145,7 +144,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
                     ephemeral=True
                 )
 
-# ───────────────── 가입 뷰 ────────────────────
+# ───────────────── 가입 View ─────────────────
 class SignupView(discord.ui.View):
     def __init__(self, author_id):
         super().__init__(timeout=300)
@@ -163,19 +162,23 @@ class SignupView(discord.ui.View):
             return False
         return True
 
+    # 직책 선택
     @discord.ui.select(
         placeholder="직책 선택",
         options=[
             discord.SelectOption(label="길드원"),
             discord.SelectOption(label="운영진"),
-            discord.SelectOption(label="관리자 (선택 X)")
+            discord.SelectOption(label="관리자 (선택 X) 서버관리자에게 문의하세요 서버관리자:링꼬")
         ],
         row=0
     )
     async def select_position(self, interaction, select):
         self.position = select.values[0]
+        for opt in self.select_position.options:
+            opt.default = (opt.label == self.position)
         await interaction.response.defer()
 
+    # 서버명 선택
     @discord.ui.select(
         placeholder="서버명 선택",
         options=[discord.SelectOption(label=k) for k in SERVER_MAP],
@@ -183,12 +186,18 @@ class SignupView(discord.ui.View):
     )
     async def select_server_name(self, interaction, select):
         self.server_name = select.values[0]
+        for opt in self.select_server_name.options:
+            opt.default = (opt.label == self.server_name)
+
+        self.server_channel = None
         self.server_channel_select.options = [
             discord.SelectOption(label=v, value=v)
             for v in SERVER_MAP[self.server_name]
         ]
+
         await interaction.response.edit_message(view=self)
 
+    # 서버 채널 선택
     @discord.ui.select(
         placeholder="서버 채널 선택",
         options=[discord.SelectOption(label="서버명을 먼저 선택하세요", value="__dummy__")],
@@ -201,7 +210,11 @@ class SignupView(discord.ui.View):
                 ephemeral=True
             )
             return
+
         self.server_channel = select.values[0]
+        for opt in self.server_channel_select.options:
+            opt.default = (opt.label == self.server_channel)
+
         await interaction.response.defer()
 
     @discord.ui.button(label="다음 (닉네임 입력)", style=discord.ButtonStyle.green, row=3)
@@ -212,11 +225,12 @@ class SignupView(discord.ui.View):
                 ephemeral=True
             )
             return
+
         await interaction.response.send_modal(
             NicknameModal(self.position, self.server_name, self.server_channel)
         )
 
-# ───────────────── 시작 버튼 ──────────────────
+# ───────────────── 시작 버튼 ─────────────────
 class StartSignupView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=300)
@@ -229,7 +243,7 @@ class StartSignupView(discord.ui.View):
             ephemeral=True
         )
 
-# ───────────────── 자동 갱신 (핵심 수정) ──────────────────
+# ───────────────── 자동 갱신 (백그라운드) ─────────────────
 async def refresh_signup_button():
     await client.wait_until_ready()
     guild = client.get_guild(GUILD_ID)
@@ -261,7 +275,7 @@ async def refresh_signup_button():
 
         await asyncio.sleep(600)
 
-# ───────────────── 실행 ──────────────────────
+# ───────────────── 실행 ─────────────────
 if __name__ == "__main__":
     token = os.getenv("DISCORD_TOKEN")
     if not token:
