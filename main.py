@@ -252,7 +252,7 @@ async def refresh_signup_button():
         try:
             channel = find_channel(guild, SIGNUP_CHANNEL_NAME)
             if not channel:
-                await asyncio.sleep(600)
+                await asyncio.sleep(300)
                 continue
 
             async for msg in channel.history(limit=10):
@@ -273,7 +273,7 @@ async def refresh_signup_button():
         except Exception as e:
             print("❌ refresh_signup_button error:", e)
 
-        await asyncio.sleep(600)
+        await asyncio.sleep(300)
 
 # ───────────────── 실행 ─────────────────
 if __name__ == "__main__":
