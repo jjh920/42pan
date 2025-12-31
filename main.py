@@ -186,7 +186,6 @@ class SignupView(discord.ui.View):
         self.server_name = select.values[0]
         for opt in self.select_server_name.options:
             opt.default = (opt.label == self.server_name)
-        ]
 
         await interaction.response.edit_message(view=self)
 
