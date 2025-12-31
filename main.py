@@ -208,13 +208,15 @@ class StartSignupView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="가입하기", style=discord.ButtonStyle.green)
-    async def start(self, interaction, button):
-        await interaction.response.send_message(
-            "직책 → 서버명 → 닉네임 순서로 진행하세요.",
-            view=SignupView(interaction.user.id),
-            ephemeral=True
-        )
+@discord.ui.button(label="가입하기", style=discord.ButtonStyle.green)
+async def start(self, interaction, button):
+    await interaction.response.defer(ephemeral=True)
+
+    await interaction.followup.send(
+        "직책 → 서버명 → 닉네임 순서로 진행하세요.",
+        view=SignupView(interaction.user.id),
+        ephemeral=True
+    )
 
 # ───────────────── 관리자 명령 ─────────────────
 @tree.command(name="가입버튼", description="가입 버튼 생성", guild=GUILD)
