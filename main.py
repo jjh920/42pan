@@ -21,7 +21,7 @@ SIGNUP_CHANNEL_NAME = "가입하기"
 WELCOME_CHANNEL_NAME = "환영합니다"
 
 # ───────────────── 서버 매핑 ─────────────────
-SERVER_MAP = {
+SERVER_MAP = [
     "엘드리히1",
     "엘드리히2",
     "로웨인",
@@ -29,7 +29,7 @@ SERVER_MAP = {
     "마레크",
     "모리안",
     "칼리온"
-}
+]
 
 # ───────────────── 유틸 ──────────────────────
 def find_role(guild: discord.Guild, name: str):
