@@ -26,7 +26,7 @@ SERVER_LIST = [
     "마레크",
     "모리안",
     "로웨인",
-    "칼리온",
+    "칼리온 (凱爾利溫)",
     "아퀼라",
 ]
 
@@ -72,7 +72,7 @@ class DoneView(discord.ui.View):
 # ───────────────── 닉네임 모달 ─────────────────
 class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
     nickname = discord.ui.TextInput(
-        label="제발!! 닉네임만 입력해주세요!!",
+        label="제발!! 닉네임만 입력해주세요!!(暱稱輸入欄)",
         placeholder="예) 싸이판짱짱맨123",
         max_length=20,
         required=True
