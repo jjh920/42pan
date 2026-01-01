@@ -248,7 +248,7 @@ async def refresh_signup_button():
 
     await update()
     while True:
-        await asyncio.sleep(600)
+        await asyncio.sleep(300)
         await update()
 
 # ───────────────── 실행 ──────────────────────
