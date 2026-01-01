@@ -89,9 +89,7 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
 
         # 닉네임 변경: 서버명/닉네임
         try:
-            await member.edit(
-                nick=f"{self.server_name}/{self.nickname}"
-            )
+            await member.edit(nick=f"{self.server_name}/{self.nickname}")
         except Exception:
             pass
 
@@ -130,7 +128,8 @@ class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
         )
 
         await welcome_channel.send(
-            f"✅ {member.mention} 님 가입을 환영합니다! 닉네임 변경은 닉네임변경요청방이나 운영진에게 문의하세요!!"
+            f"✅ {member.mention} 님 가입을 환영합니다! "
+            f"닉네임 변경은 닉네임변경요청방이나 운영진에게 문의하세요!!"
         )
 
 # ───────────────── 가입 View ──────────────────
@@ -156,7 +155,9 @@ class SignupView(discord.ui.View):
         options=[
             discord.SelectOption(label="길드원(行會成員)"),
             discord.SelectOption(label="운영진(行會成員)"),
-            discord.SelectOption(label="관리자(行會成員) (선택 X) 서버관리자에게 문의하세요 서버관리자:링꼬")
+            discord.SelectOption(
+                label="관리자(行會成員) (선택 X) 서버관리자에게 문의하세요 서버관리자:링꼬"
+            )
         ],
         row=0
     )
@@ -241,7 +242,10 @@ async def refresh_signup_button():
         async for msg in channel.history(limit=10):
             if msg.author == client.user and msg.embeds:
                 if msg.embeds[0].title == "▶️ 서버 가입 안내":
-                    await msg.delete()
+                    try:
+                        await msg.delete()
+                    except (discord.NotFound, discord.Forbidden):
+                        pass
 
         embed = discord.Embed(
             title="▶️ 서버 가입 안내",
