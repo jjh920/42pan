@@ -234,22 +234,26 @@ async def refresh_signup_button():
         if not channel:
             return
 
-        async for msg in channel.history(limit=10):
-            if msg.author == client.user and msg.embeds:
-                if msg.embeds[0].title == "▶️ 서버 가입 안내":
-                    await msg.delete()
+        try:
+            async for msg in channel.history(limit=10):
+                if msg.author == client.user and msg.embeds:
+                    if msg.embeds[0].title == "▶️ 서버 가입 안내":
+                        await msg.delete()
 
-        embed = discord.Embed(
-            title="▶️ 서버 가입 안내",
-            description="아래 버튼을 눌러 가입하세요.",
-            color=discord.Color.blurple()
-        )
-        await channel.send(embed=embed, view=StartSignupView())
+            embed = discord.Embed(
+                title="▶️ 서버 가입 안내",
+                description="아래 버튼을 눌러 가입하세요.",
+                color=discord.Color.blurple()
+            )
+            await channel.send(embed=embed, view=StartSignupView())
+
+        except discord.HTTPException as e:
+            # 🔴 1015 / 429 발생 시 즉시 중단
+            print(f"[WARN] Discord API blocked: {e}")
+            raise SystemExit("Discord API blocked. Stop task.")
 
     await update()
-    while True:
-        await asyncio.sleep(300)
-        await update()
+
 
 # ───────────────── 실행 ──────────────────────
 if __name__ == "__main__":
