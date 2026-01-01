@@ -73,7 +73,7 @@ class DoneView(discord.ui.View):
 class NicknameModal(discord.ui.Modal, title="닉네임 입력"):
     nickname = discord.ui.TextInput(
         label="제발!! 닉네임만 입력해주세요!!",
-        placeholder="예) 싸이판은신이야",
+        placeholder="예) 싸이판짱짱맨123",
         max_length=20,
         required=True
     )
