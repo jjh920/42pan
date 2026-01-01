@@ -154,9 +154,9 @@ class SignupView(discord.ui.View):
         placeholder="직책 선택",
         options=[
             discord.SelectOption(label="길드원(行會成員)"),
-            discord.SelectOption(label="운영진(行會成員)"),
+            discord.SelectOption(label="운영진(管理團隊)"),
             discord.SelectOption(
-                label="관리자(行會成員) (선택 X) 서버관리자에게 문의하세요 서버관리자:링꼬"
+                label="관리자(未實施) (선택 X) 서버관리자에게 문의하세요 서버관리자:링꼬"
             )
         ],
         row=0
@@ -198,7 +198,7 @@ class StartSignupView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="가입하기", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="가입하기(加入)", style=discord.ButtonStyle.green)
     async def start(self, interaction, button):
         await interaction.response.send_message(
             "직책 → 서버명 → 닉네임 순서로 진행하세요.",
