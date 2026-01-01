@@ -16,8 +16,8 @@ tree = app_commands.CommandTree(client)
 GUILD_ID = int(os.getenv("GUILD_ID", "0"))
 GUILD = discord.Object(id=GUILD_ID)
 
-SIGNUP_CHANNEL_NAME = "가입하기"
-WELCOME_CHANNEL_NAME = "환영합니다"
+SIGNUP_CHANNEL_NAME = "가입하기-報名"
+WELCOME_CHANNEL_NAME = "환영합니다-歡迎"
 
 # ───────────────── 서버 목록 ─────────────────
 SERVER_LIST = [
