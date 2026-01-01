@@ -4,7 +4,6 @@ import os
 import asyncio
 import discord
 from discord import app_commands
-from keep_alive import keep_alive
 
 # ───────────────── 기본 설정 ─────────────────
 intents = discord.Intents.default()
